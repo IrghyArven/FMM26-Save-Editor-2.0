@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>Editor Save FMM26 Modern by Irghy</title>
+<meta name="theme-color" content="#0b0f19">
+<meta name="description" content="Editor save Football Manager Mobile 26 — edit pemain dan klub dengan ekspor ke file baru.">
+<title>FMM26 Save Editor — Irghy</title>
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script>
@@ -79,6 +81,29 @@ body {
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
 
+/* Accessibility, responsive polish, and clearer interaction states */
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid #60a5fa; outline-offset: 3px; }
+button, input, select { min-height: 38px; }
+button:disabled { filter: saturate(.45); }
+.bento-card { scroll-margin-top: 1rem; }
+#s-players, #s-find { scroll-margin-top: 1rem; }
+@media (min-width: 900px) {
+  body { padding-left: 2rem; padding-right: 2rem; }
+  #s-find > .flex.gap-2, #s-players > .flex.gap-2 { align-items: stretch; }
+  #form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+  #form > details { min-width: 0; }
+}
+@media (max-width: 420px) {
+  body { padding-left: .75rem; padding-right: .75rem; }
+  .bento-card { border-radius: 1rem; }
+  #s-edit .flex.items-center.justify-between { gap: .5rem; }
+  #pmeta { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
 /* Unicode Icon Badges */
 .icon-badge {
   display: inline-flex;
@@ -91,9 +116,21 @@ body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Compact tab-based application shell */
+.app-tabs{position:sticky;top:0;z-index:40;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem;padding:.55rem;margin:0 0 1rem;border:1px solid rgba(96,165,250,.16);border-radius:1.1rem;background:rgba(11,15,25,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 30px rgba(0,0,0,.24)}
+.app-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:.45rem;min-height:48px;padding:.55rem .35rem;border:1px solid transparent;border-radius:.8rem;background:rgba(30,41,59,.62);color:#94a3b8;font-size:.75rem;transition:background .18s,border-color .18s,color .18s}
+.app-tab span{font-size:1rem}.app-tab b{font-weight:800}.app-tab.active{background:linear-gradient(135deg,#2563eb,#4f46e5);border-color:rgba(147,197,253,.4);color:white;box-shadow:0 5px 18px rgba(37,99,235,.25)}
+.app-tab em{position:absolute;top:2px;right:5px;min-width:17px;padding:1px 4px;border-radius:99px;background:#10b981;color:#052e24;font-size:9px;font-style:normal;font-weight:900}
+.app-tab-panel{display:none;animation:tabIn .18s ease}.app-tab-panel.active{display:block}@keyframes tabIn{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.history-btn{padding:.75rem;border-radius:.8rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;font-size:.8rem;font-weight:800}.history-btn:disabled{opacity:.35;cursor:not-allowed}
+#tab-players #s-find,#tab-players #s-players,#tab-players #s-edit,#tab-club #s-club,#tab-changes #s-overview,#tab-changes #s-log{scroll-margin-top:5rem}
+@media(max-width:420px){.app-tab{flex-direction:column;gap:.1rem;font-size:.68rem;min-height:54px}.app-tab span{font-size:1.1rem}.app-tab em{top:3px;right:12px}}
+@media(prefers-reduced-motion:reduce){.app-tab-panel{animation:none}}
+
 </style>
 </head>
-<body class="antialiased min-h-screen pb-32 pt-4 px-3 sm:px-6 max-w-2xl mx-auto">
+<body class="antialiased min-h-screen pb-32 pt-4 px-3 sm:px-6 max-w-5xl mx-auto">
 
 <!-- HERO BANNER WITH TACTICAL CANVAS -->
 <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-6 border border-slate-800 shadow-2xl mb-5">
@@ -124,6 +161,29 @@ body {
   </div>
 </div>
 
+<!-- MAIN TAB NAVIGATION -->
+<nav id="main-tabs" class="app-tabs" role="tablist" aria-label="Menu utama">
+  <button type="button" class="app-tab active" data-tab="file" role="tab" aria-selected="true"><span>📂</span><b>File</b></button>
+  <button type="button" class="app-tab" data-tab="players" role="tab" aria-selected="false"><span>👥</span><b>Pemain</b></button>
+  <button type="button" class="app-tab" data-tab="club" role="tab" aria-selected="false"><span>🏟️</span><b>Klub</b></button>
+  <button type="button" class="app-tab" data-tab="changes" role="tab" aria-selected="false"><span>↶</span><b>Perubahan</b><em id="tab-change-count">0</em></button>
+</nav>
+
+<section id="tab-file" class="app-tab-panel active" data-panel="file">
+<!-- SESSION OVERVIEW -->
+<section id="s-overview" class="bento-card p-4 mb-5" hidden aria-live="polite">
+  <div class="flex items-center justify-between gap-3 mb-3">
+    <div><p class="text-[10px] uppercase tracking-widest text-blue-300 font-bold">Ringkasan sesi</p><h2 id="overview-file" class="text-sm font-extrabold text-white truncate">Save belum dimuat</h2></div>
+    <span id="overview-state" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">SIAP</span>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+    <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><span class="block text-[10px] text-slate-500">Pemain terbaca</span><b id="ov-players" class="text-lg text-white">—</b></div>
+    <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><span class="block text-[10px] text-slate-500">Main record</span><b id="ov-main" class="text-lg text-white">—</b></div>
+    <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><span class="block text-[10px] text-slate-500">Perubahan</span><b id="ov-changes" class="text-lg text-emerald-300">0</b></div>
+    <div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><span class="block text-[10px] text-slate-500">Ukuran file</span><b id="ov-size" class="text-lg text-white">—</b></div>
+  </div>
+</section>
+
 <!-- STEP 1: FILE PICKER -->
 <div id="s-file" class="bento-card p-5 mb-5">
   <div class="flex items-center gap-3 mb-4">
@@ -141,11 +201,14 @@ body {
       <p class="text-xs text-slate-500 mt-1">Klik di sini untuk mengunggah dari penyimpanan internal</p>
     </div>
   </label>
-  <input id="file" type="file" accept=".fms" class="hidden">
+  <input id="file" type="file" accept=".fms,application/octet-stream" aria-label="Pilih file save FMM26" class="hidden">
   
   <p id="fstat" class="text-xs text-slate-400 mt-3 text-center">Belum ada file terpilih. Pastikan file save diletakkan di folder Download.</p>
 </div>
 
+</section>
+
+<section id="tab-players" class="app-tab-panel" data-panel="players">
 <!-- STEP 2: PLAYER SEARCH SECTION -->
 <div id="s-find" class="bento-card p-5 mb-5" hidden>
   <div class="flex items-center gap-3 mb-4">
@@ -158,9 +221,9 @@ body {
 
   <!-- Capsule Tabs -->
   <div class="flex p-1 bg-slate-950 rounded-xl mb-3 border border-slate-800" role="tablist">
-    <button id="t-name" type="button" class="flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-md">Cari Nama</button>
-    <button id="t-sid" type="button" class="flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all text-slate-400 hover:text-white">Cari SID (ID)</button>
-    <button id="t-uid" type="button" class="flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all text-slate-400 hover:text-white">Cari UID</button>
+    <button id="t-name" type="button" role="tab" aria-selected="true" class="flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-md">Cari Nama</button>
+    <button id="t-sid" type="button" role="tab" aria-selected="false" class="flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all text-slate-400 hover:text-white">Cari SID (ID)</button>
+    <button id="t-uid" type="button" role="tab" aria-selected="false" class="flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all text-slate-400 hover:text-white">Cari UID</button>
   </div>
 
   <div class="flex gap-2">
@@ -217,6 +280,9 @@ body {
   <button id="p-more" type="button" class="w-full mt-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200" hidden>Tampilkan lebih banyak</button>
 </div>
 
+</section>
+
+<section id="tab-club" class="app-tab-panel" data-panel="club">
 <!-- STEP 2B: CLUB EDITOR -->
 <div id="s-club" class="bento-card p-5 mb-5" hidden>
   <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
@@ -282,12 +348,20 @@ body {
   <p id="toast" class="text-xs font-semibold text-emerald-400 mt-2 text-center min-h-[1.5em]" role="status"></p>
 </div>
 
+</section>
+
+<section id="tab-changes" class="app-tab-panel" data-panel="changes">
 <!-- CHANGE LOG SHEET -->
 <div id="s-log" class="bento-card p-5 mb-5" hidden>
   <div class="flex items-center gap-3 mb-3">
     <div class="icon-badge bg-emerald-500/10 border-emerald-500/30 text-emerald-400">📋</div>
     <h2 class="text-base font-bold text-white">Daftar Perubahan Aktif</h2>
   </div>
+  <div class="grid grid-cols-2 gap-2 mb-3">
+    <button id="undo" type="button" disabled class="history-btn">↶ Undo</button>
+    <button id="redo" type="button" disabled class="history-btn">↷ Redo</button>
+  </div>
+  <p id="history-status" class="text-[11px] text-slate-500 mb-3" aria-live="polite">Belum ada aksi yang bisa dibatalkan.</p>
   <ol id="log" class="list-decimal list-inside text-xs text-slate-300 space-y-1 bg-slate-950/60 p-3 rounded-xl border border-slate-800"></ol>
 </div>
 
@@ -307,11 +381,13 @@ body {
   </details>
 </div>
 
+</section>
+
 <!-- FLOATING ACTION NAVIGATION BAR -->
 <div class="fixed bottom-0 left-0 right-0 z-50 floating-nav px-4 py-3">
   <div class="max-w-2xl mx-auto flex items-center justify-between gap-3">
     <div class="flex flex-col">
-      <span id="bstat" class="text-xs font-medium text-slate-300">Belum ada file dimuat</span>
+      <span id="bstat" role="status" aria-live="polite" class="text-xs font-medium text-slate-300">Belum ada file dimuat</span>
       <span class="text-[10px] text-slate-400 font-semibold">Created by <span class="text-indigo-400 font-bold">Irghy</span> • Safe Engine</span>
     </div>
     <button id="save" type="button" disabled class="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-blue-950/50 flex items-center gap-2">
@@ -686,6 +762,41 @@ setTimeout(drawPitchCanvas, 100);
 (function(){
   var $=function(id){return document.getElementById(id);};
   var eng=null, fileName='save.fms', cur=null, changes=[], mode='name';
+  var history=[], historyIndex=0, historyLimit=20, activeTab='file';
+  function setTab(name){
+    if(name!=='file'&&!eng) name='file';
+    activeTab=name;
+    document.querySelectorAll('.app-tab-panel').forEach(function(panel){panel.classList.toggle('active',panel.getAttribute('data-panel')===name);});
+    document.querySelectorAll('.app-tab').forEach(function(btn){var on=btn.getAttribute('data-tab')===name;btn.classList.toggle('active',on);btn.setAttribute('aria-selected',on?'true':'false');});
+    if(name==='players'&&eng&&!pl) initPlayers();
+    if(name==='club'&&eng&&!club) loadClub();
+    if(name==='changes') renderLog();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.querySelectorAll('.app-tab').forEach(function(btn){btn.addEventListener('click',function(){setTab(btn.getAttribute('data-tab'));});});
+  function syncHistoryUI(){
+    $('undo').disabled=historyIndex===0; $('redo').disabled=historyIndex>=history.length;
+    $('history-status').textContent=history.length?('Riwayat '+historyIndex+'/'+history.length+' • Maksimal '+historyLimit+' aksi'):'Belum ada aksi yang bisa dibatalkan.';
+  }
+  function pushHistory(before){
+    history=history.slice(0,historyIndex);
+    history.push({before:before,after:new Uint8Array(eng.buf),beforeChanges:historyIndex?history[historyIndex-1].afterChanges.slice():[],afterChanges:changes.slice()});
+    if(history.length>historyLimit) history.shift();
+    historyIndex=history.length; syncHistoryUI();
+  }
+  function restoreHistory(target){
+    if(!eng||target<0||target>history.length||target===historyIndex)return;
+    var sid=cur&&cur.sid,nm=cur&&cur.name;
+    if(target<historyIndex){var entry=history[historyIndex-1];eng.buf.set(entry.before);changes=entry.beforeChanges.slice();}
+    else {var next=history[historyIndex];eng.buf.set(next.after);changes=next.afterChanges.slice();}
+    historyIndex=target; loadClub(); if(pl) initPlayers();
+    if(sid!==undefined) openPlayer(sid,nm); else closeEditor();
+    renderLog();updateBar();syncHistoryUI();
+    $('history-status').textContent=target<history.length?'Riwayat dipulihkan.':'Riwayat diterapkan kembali.';
+  }
+  $('undo').onclick=function(){restoreHistory(historyIndex-1);};
+  $('redo').onclick=function(){restoreHistory(historyIndex+1);};
+
 
   var TAG={
     ok:'<span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">TERUJI</span>',
@@ -719,18 +830,20 @@ setTimeout(drawPitchCanvas, 100);
     var f=ev.target.files&&ev.target.files[0]; if(!f) return;
     fileName=f.name; status('Membaca '+f.name+' ...');
     var r=new FileReader();
-    r.onerror=function(){status('Gagal membaca file. Coba salin file ke folder Download.',true);};
+    r.onerror=function(){status('Gagal membaca file. Coba pilih ulang file dari penyimpanan perangkat.',true); $('file').value='';};
     r.onload=function(){
       status('Memindai data pemain (beberapa detik) ...');
       later(function(){
         try{
           eng=createEngine(new Uint8Array(r.result));
-        }catch(e){ status('File tidak valid: '+e.message,true); return; }
-        if(eng.count<1000){ status('Bukan save FMM26 yang didukung ('+eng.count+' pemain).',true); eng=null; return; }
-        changes=[]; renderLog(); closeEditor();
+        }catch(e){ eng=null; status('File tidak valid atau rusak: '+e.message,true); $('s-overview').hidden=true; updateBar(); return; }
+        if(eng.count<1000){ status('Bukan save FMM26 yang didukung ('+eng.count+' pemain).',true); eng=null; $('s-overview').hidden=true; updateBar(); return; }
+        changes=[]; history=[]; historyIndex=0; syncHistoryUI(); renderLog(); closeEditor();
         status(f.name+' • '+(f.size/1048576).toFixed(1)+' MB • '+eng.count.toLocaleString('id-ID')+' pemain terbaca.');
+        $('s-overview').hidden=false; $('overview-file').textContent=f.name; $('ov-players').textContent=eng.count.toLocaleString('id-ID'); $('ov-main').textContent=eng.mainCount.toLocaleString('id-ID'); $('ov-size').textContent=(f.size/1048576).toFixed(2)+' MB'; $('overview-state').textContent='SAVE DIMUAT';
         $('s-find').hidden=false; $('res').innerHTML=''; loadClub(); initPlayers();
-        updateBar();
+        $('s-overview').hidden=false; $('overview-file').textContent=f.name; $('ov-players').textContent=eng.count.toLocaleString('id-ID'); $('ov-main').textContent=eng.mainCount.toLocaleString('id-ID'); $('ov-size').textContent=(f.size/1048576).toFixed(2)+' MB';
+        setTab('players'); updateBar();
       });
     };
     r.readAsArrayBuffer(f);
@@ -820,36 +933,58 @@ setTimeout(drawPitchCanvas, 100);
 
   $('c-apply').onclick=function(){
     if(!club||!eng) return;
-    var done=[], bad=[], t=$('c-toast'), v;
-    function num(id,min,max,name){
-      var el=$(id); if(el.disabled) return null;
-      var n=parseInt(el.value,10);
-      if(isNaN(n)||n<min||n>max){ bad.push(name); return null; }
+    var plans=[], bad=[], done=[], t=$('c-toast'), v;
+    function num(id,min,max,name,disabledOK){
+      var el=$(id); if(el.disabled&&disabledOK) return null;
+      var n=Number(el.value);
+      if(el.value.trim()===''||!Number.isInteger(n)||n<min||n>max){bad.push(name);return null;}
       return n;
     }
-    v=num('c-budget',0,2000000000,'budget');
-    if(v!==null&&v!==club.budget){ setU32(club.budgetAt,v); done.push('Anggaran transfer: £'+club.budget.toLocaleString('en-GB')+' → £'+v.toLocaleString('en-GB')); club.budget=v; }
-    v=num('c-train',1,20,'fasilitas latihan');
-    if(v!==null&&v!==club.train){ eng.setByte(club.data+149,v); done.push('Fasilitas latihan: '+club.train+' → '+v); club.train=v; }
-    v=num('c-youth',1,20,'fasilitas pemain muda');
-    if(v!==null&&v!==club.youth){ eng.setByte(club.data+150,v); done.push('Fasilitas pemain muda: '+club.youth+' → '+v); club.youth=v; }
-    [['c-att','att',151,'Rata2 penonton'],['c-attmin','attMin',153,'Penonton min'],['c-attmax','attMax',155,'Penonton maks']].forEach(function(r){
-      var n=num(r[0],0,655350,r[3].toLowerCase());
-      if(n!==null){ n=Math.round(n/10)*10; if(n!==club[r[1]]){ eng.setU16(club.data+r[2],n/10); done.push(r[3]+': '+club[r[1]]+' → '+n); club[r[1]]=n; } }
+    var budget=num('c-budget',0,2000000000,'budget',true);
+    var train=num('c-train',1,20,'fasilitas latihan');
+    var youth=num('c-youth',1,20,'fasilitas pemain muda');
+    var attendance=[
+      {id:'c-att',key:'att',offset:151,label:'Rata2 penonton'},
+      {id:'c-attmin',key:'attMin',offset:153,label:'Penonton min'},
+      {id:'c-attmax',key:'attMax',offset:155,label:'Penonton maks'}
+    ];
+    var attValues={};
+    attendance.forEach(function(r){var n=num(r.id,0,655350,r.label.toLowerCase());if(n!==null)attValues[r.key]=Math.round(n/10)*10;});
+    var names=[
+      {id:'c-full',key:'full',places:'fullAt',label:'Nama lengkap'},
+      {id:'c-short',key:'short',places:'shortAt',label:'Nama pendek'}
+    ];
+    var nameValues={};
+    names.forEach(function(r){
+      var nv=$(r.id).value, bytes=TE.encode(nv), old=TE.encode(club[r.key]);
+      if(bytes.length!==old.length) bad.push(r.label.toLowerCase()+' (panjang harus '+old.length+' byte)');
+      else nameValues[r.key]=bytes;
     });
-    [['c-full','full','fullAt','Nama lengkap'],['c-short','short','shortAt','Nama pendek']].forEach(function(r){
-      var nv=$(r[0]).value, ov=club[r[1]];
-      if(nv===ov) return;
-      var nb=TE.encode(nv), ob=TE.encode(ov);
-      if(nb.length!==ob.length){ bad.push(r[3].toLowerCase()+' (panjang harus '+ob.length+' byte)'); return; }
-      club[r[2]].forEach(function(a){ eng.buf.set(nb,a); });
-      done.push(r[3]+': '+ov+' → '+nv+' ('+club[r[2]].length+' lokasi)'); club[r[1]]=nv;
+    if(bad.length){t.className='text-xs font-semibold text-rose-400 text-center min-h-[1.5em]';t.textContent='Tidak ada perubahan diterapkan. Periksa isian: '+bad.join(', ')+'.';return;}
+
+    if(budget!==null&&budget!==club.budget) plans.push({type:'u32',at:club.budgetAt,value:budget,label:'Anggaran transfer: £'+club.budget.toLocaleString('en-GB')+' → £'+budget.toLocaleString('en-GB'),key:'budget'});
+    if(train!==club.train) plans.push({type:'byte',at:club.data+149,value:train,label:'Fasilitas latihan: '+club.train+' → '+train,key:'train'});
+    if(youth!==club.youth) plans.push({type:'byte',at:club.data+150,value:youth,label:'Fasilitas pemain muda: '+club.youth+' → '+youth,key:'youth'});
+    attendance.forEach(function(r){var n=attValues[r.key];if(n!==club[r.key])plans.push({type:'u16',at:club.data+r.offset,value:n/10,label:r.label+': '+club[r.key]+' → '+n,key:r.key,valueDisplay:n});});
+    names.forEach(function(r){var bytes=nameValues[r.key];if($(r.id).value!==club[r.key])plans.push({type:'name',bytes:bytes,places:club[r.places],label:r.label+': '+club[r.key]+' → '+$(r.id).value+' ('+club[r.places].length+' lokasi)',key:r.key,valueDisplay:$(r.id).value});});
+    if(!plans.length){t.className='text-xs font-semibold text-slate-400 text-center min-h-[1.5em]';t.textContent='Tidak ada perubahan.';return;}
+
+    var before=new Uint8Array(eng.buf);
+    plans.forEach(function(plan){
+      if(plan.type==='u32') setU32(plan.at,plan.value);
+      else if(plan.type==='byte') eng.setByte(plan.at,plan.value);
+      else if(plan.type==='u16') eng.setU16(plan.at,plan.value);
+      else if(plan.type==='name') plan.places.forEach(function(a){eng.buf.set(plan.bytes,a);});
+      done.push(plan.label);
+      if(plan.key==='budget') club.budget=plan.value;
+      else if(plan.key==='train') club.train=plan.value;
+      else if(plan.key==='youth') club.youth=plan.value;
+      else if(plan.key==='full'||plan.key==='short') club[plan.key]=plan.valueDisplay;
+      else club[plan.key]=plan.valueDisplay;
     });
-    if(bad.length){ t.className='text-xs font-semibold text-rose-400 text-center min-h-[1.5em]'; t.textContent='Periksa isian: '+bad.join(', ')+'.'; if(!done.length) return; }
-    if(!done.length){ t.className='text-xs font-semibold text-slate-400 text-center min-h-[1.5em]'; t.textContent='Tidak ada perubahan.'; return; }
-    done.forEach(function(x){ changes.push('Klub — '+x); });
-    renderLog(); updateBar(); renderClub();
-    t.className='text-xs font-bold text-emerald-400 text-center min-h-[1.5em]'; t.textContent=done.length+' perubahan klub diterapkan!';
+    done.forEach(function(x){changes.push('Klub — '+x);});
+    pushHistory(before);renderLog();updateBar();renderClub();
+    t.className='text-xs font-bold text-emerald-400 text-center min-h-[1.5em]';t.textContent=done.length+' perubahan klub diterapkan!';
   };
 
   /* ===== DAFTAR PEMAIN (Klub Saya / Semua Pemain) ===== */
@@ -900,7 +1035,7 @@ setTimeout(drawPitchCanvas, 100);
     });
     out.sort(function(x,y){
       var vx,vy;
-      if(sortK==='name'){ vx=(x.name||'~'+('00000'+x.sid).slice(-6)).toLowerCase(); vy=(y.name||'~'+('00000'+y.sid).slice(-6)).toLowerCase(); return vx<vy?-pDir*-1:vx>vy?pDir*-1:0; }
+      if(sortK==='name'){ vx=(x.name||'~'+('00000'+x.sid).slice(-6)).toLowerCase(); vy=(y.name||'~'+('00000'+y.sid).slice(-6)).toLowerCase(); return vx<vy?pDir*-1:vx>vy?pDir:0; }
       vx=sortK==='age'?(x.age===null?-1:x.age):x[sortK]; vy=sortK==='age'?(y.age===null?-1:y.age):y[sortK];
       return (vx-vy)*pDir||(y.ca-x.ca);
     });
@@ -945,9 +1080,9 @@ setTimeout(drawPitchCanvas, 100);
     mode=m;
     var on='flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-md';
     var off='flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all text-slate-400 hover:text-white';
-    $('t-name').className=m==='name'?on:off;
-    $('t-sid').className=m==='sid'?on:off;
-    $('t-uid').className=m==='uid'?on:off;
+    $('t-name').className=m==='name'?on:off; $('t-name').setAttribute('aria-selected',m==='name'?'true':'false');
+    $('t-sid').className=m==='sid'?on:off; $('t-sid').setAttribute('aria-selected',m==='sid'?'true':'false');
+    $('t-uid').className=m==='uid'?on:off; $('t-uid').setAttribute('aria-selected',m==='uid'?'true':'false');
     $('q').placeholder=m==='name'?'Contoh: Harry Kane atau Mbappé':(m==='sid'?'SID desimal (3193) atau hex (790c0000)':'UID hex (b99c3777) atau Main Record (7e880000b99c3777)');
     $('hint').innerHTML=m==='name'?'Ketik nama lengkap atau sebagian persis seperti di game. Hanya pemain yang namanya terbaca dari save yang bisa dicari lewat nama.':(m==='sid'?'SID bisa berupa desimal biasa atau kode hex 8 digit.':'UID dan Main Record disalin persis dari layar detail pemain di viewer (urutan byte apa adanya).');
     $('res').innerHTML='';
@@ -1059,7 +1194,7 @@ setTimeout(drawPitchCanvas, 100);
     h+=numRow('rep2','Reputasi Dunia',p.rep[2],0,10000,TAG.no);
     h+='</div></details>';
 
-    $('form').innerHTML=h; $('s-edit').hidden=false; $('toast').textContent='';
+    $('form').innerHTML=h; $('s-edit').hidden=false; $('toast').textContent=''; setTab('players');
     refreshPreviews();
     $('s-edit').scrollIntoView({behavior:'smooth',block:'start'});
   }
@@ -1115,8 +1250,8 @@ setTimeout(drawPitchCanvas, 100);
   $('close').onclick=closeEditor;
 
   function intIn(el,min,max){
-    var v=parseInt(el.value,10);
-    if(isNaN(v)||v<min||v>max) return null;
+    var v=Number(el.value);
+    if(el.value.trim()===''||!Number.isInteger(v)||v<min||v>max) return null;
     return v;
   }
 
@@ -1126,6 +1261,21 @@ setTimeout(drawPitchCanvas, 100);
     function once(k){return f.querySelector('input[data-k="'+k+'"]');}
     var els=f.querySelectorAll('input[data-k]'), i, el, k, o, v, min, max;
     var dobTouched=false;
+    /* Preflight: validate every field before writing any byte, so an invalid field cannot leave a partial edit. */
+    for(i=0;i<els.length;i++){
+      el=els[i]; k=el.getAttribute('data-k'); o=parseInt(el.getAttribute('data-o'),10);
+      if(k.indexOf('dob-')===0){ if(parseInt(el.value,10)!==o) dobTouched=true; continue; }
+      min=parseInt(el.min,10); max=parseInt(el.max,10); v=intIn(el,min,max);
+      if(v===null) bad.push(k);
+    }
+    if(dobTouched&&cur.dob){
+      var pd=intIn(once('dob-d'),1,31), pm=intIn(once('dob-m'),1,12), py=intIn(once('dob-y'),1930,2026);
+      var pt=(pd&&pm&&py)?new Date(Date.UTC(py,pm-1,pd)):null;
+      if(!pt||pt.getUTCDate()!==pd||pt.getUTCMonth()!==pm-1) bad.push('tanggal lahir');
+    }
+    if(bad.length){ $('toast').className='text-xs font-semibold text-rose-400 mt-2 text-center min-h-[1.5em]'; $('toast').textContent='Tidak ada perubahan diterapkan. Periksa isian: '+bad.join(', ')+'.'; return; }
+    bad=[];
+    var before=new Uint8Array(eng.buf);
     for(i=0;i<els.length;i++){
       el=els[i]; k=el.getAttribute('data-k'); o=parseInt(el.getAttribute('data-o'),10);
       if(k.indexOf('dob-')===0){ if(parseInt(el.value,10)!==o) dobTouched=true; continue; }
@@ -1159,19 +1309,27 @@ setTimeout(drawPitchCanvas, 100);
     if(bad.length){ $('toast').className='text-xs font-semibold text-rose-400 mt-2 text-center min-h-[1.5em]'; $('toast').textContent='Periksa isian kembali: '+bad.join(', ')+'.'; if(!done.length) return; }
     if(!done.length){ $('toast').className='text-xs font-semibold text-slate-400 mt-2 text-center min-h-[1.5em]'; $('toast').textContent='Tidak ada perubahan.'; return; }
     done.forEach(function(s){ changes.push(cur.name+' — '+s); });
-    renderLog(); updateBar();
+    pushHistory(before); renderLog(); updateBar();
     var sid=cur.sid, nm=cur.name;
     openPlayer(sid,nm);
     $('toast').className='text-xs font-bold text-emerald-400 mt-2 text-center min-h-[1.5em]'; $('toast').textContent=done.length+' perubahan berhasil diterapkan!';
   };
 
   function renderLog(){
-    $('s-log').hidden=!changes.length;
-    $('log').innerHTML=changes.map(function(c){return '<li>'+esc(c)+'</li>';}).join('');
+    $('s-log').hidden=!(changes.length||history.length);
+    $('log').innerHTML=changes.length?changes.map(function(c){return '<li>'+esc(c)+'</li>';}).join(''):'<li class="text-slate-500">Tidak ada perubahan aktif. Gunakan Redo untuk memulihkan aksi yang dibatalkan.</li>';
   }
   function updateBar(){
     $('bstat').textContent=changes.length?changes.length+' perubahan belum disimpan':(eng?'Belum ada perubahan':'Pilih file save dulu');
     $('save').disabled=!(eng&&changes.length);
+    if($('tab-change-count')) $('tab-change-count').textContent=changes.length>99?'99+':String(changes.length);
+    if($('ov-changes')) $('ov-changes').textContent=changes.length.toLocaleString('id-ID');
+    syncHistoryUI();
+    if($('s-overview')&&!$('s-overview').hidden){
+      $('ov-changes').textContent=changes.length.toLocaleString('id-ID');
+      $('overview-state').textContent=changes.length?'ADA PERUBAHAN':'SAVE DIMUAT';
+      $('overview-state').className=changes.length?'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20':'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20';
+    }
   }
 
   /* Safe Export Handling for WebView & Standard Browsers */
